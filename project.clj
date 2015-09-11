@@ -9,8 +9,6 @@
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [cljs-ajax "0.3.14"]
                  [cljs-http "0.1.37"]
-                 ;; [enfocus "2.1.1"]
-                 ;; [prismatic/dommy "1.1.0"]
                  [hickory "0.5.4"]
                  [reagent "0.5.0"]]
 

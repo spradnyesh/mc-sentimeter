@@ -3,8 +3,6 @@
               [cljs.core.async :refer [<! >! chan close!]]
               [ajax.core :refer [GET]]
               [cljs-http.client :as http]
-              ;; [enfocus.core :as ef]
-              ;; [dommy.core :refer-macros [sel sel1] :as dommy]
               [hickory.core :as hc]
               [hickory.select :as hs]
               [reagent.core :as r])
@@ -21,7 +19,6 @@
                                  (rest (str/split a-z #"")))
                             '("others")))
 (defonce app-state (r/atom nil))
-;; (defonce refreshing? (atom false))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; utils
