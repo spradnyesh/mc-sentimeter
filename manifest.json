@@ -1,0 +1,15 @@
+{
+    "manifest_version": 2,
+
+    "name": "mc-sentimeter",
+    "description": "Find 'highest' sentimeter scrips on http://www.moneycontrol.com",
+    "version": "1.0",
+
+    "browser_action": {
+        "default_icon": "resources/public/icon.png",
+        "default_popup": "resources/public/index.html"
+    },
+    "permissions": [
+        "activeTab"
+    ]
+}
