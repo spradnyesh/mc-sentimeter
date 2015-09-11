@@ -76,7 +76,7 @@
                           (filter #(= :a (:tag %))
                                   (hs/select (hs/class :bl_12)
                                              (hc/as-hickory (hc/parse response))))))]
-    (if dev? (take 1 rslt) rslt)))
+    (if dev? (take 10 rslt) rslt)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; logic
@@ -102,7 +102,7 @@
 (defn main []
   (when (empty? @app-state)
     (let [state (atom nil)
-          smbls (if dev? ["A"] index-suffixes)
+          smbls (if dev? ["A" "S"] index-suffixes)
           ch-urls (index->smbls smbls)
           ;; ch needs to be of size 1 because both >! and <! happen in same thread,
           ;; and both producer and consumer will never be available simultaneously
@@ -125,12 +125,13 @@
 
 (defn c-main []
   [:div
-   [:input {:id "refresh" :type "button" :value "Refresh"}]
-   [:table [:tbody
-            [:tr [:th "name"] [:th "buy"]]
-            (for [row @app-state]
-              ^{:key (.random js/Math)}
-              [:tr [:td [:a {:href (:url row)} (:smbl row)]] [:td (:buy row)]])]]])
+   [:table {:class "table table-striped table-bordered"}
+    [:tbody
+     [:tr [:th "name"] [:th "buy"]]
+     (for [row @app-state]
+       ^{:key (.random js/Math)}
+       [:tr [:td [:a {:href (:url row)} (:smbl row)]] [:td (:buy row)]])]]
+   [:input {:id "refresh" :type "button" :value "Refresh"}]])
 
 (defn add-event-listeners []
   (.addEventListener (by-id "refresh") "click" #(main)))
