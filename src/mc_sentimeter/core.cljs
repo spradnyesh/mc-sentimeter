@@ -134,7 +134,7 @@
    [:input {:id "refresh" :type "button" :value "Refresh"}]])
 
 (defn add-event-listeners []
-  (.addEventListener (by-id "refresh") "click" #(main)))
+  (.addEventListener (by-id "refresh") "click" #(do (reset)(main))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; init
