@@ -2,7 +2,6 @@
     (:require [clojure.string :as str]
               [cljs.core.async :refer [<! >! chan close!]]
               [ajax.core :refer [GET]]
-              [cljs-http.client :as http]
               [hickory.core :as hc]
               [hickory.select :as hs]
               [reagent.core :as r])
@@ -13,11 +12,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; constants
 
-(def a-z "abcdefghijklmnopqrstuvwxyz")
 (def index-prefix "http://www.moneycontrol.com/india/stockmarket/pricechartquote/")
-(def index-suffixes (concat (map str/upper-case
-                                 (rest (str/split a-z #"")))
-                            '("others")))
+(def index-suffixes (conj (mapv char (range 65 (+ 65 26))) "OTHERS")) ; A-Z + OTHERS
 (defonce app-state (r/atom nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -45,6 +41,13 @@
                   first
                   :content
                   first)
+        nse-price (->> parsed
+                       (hs/select (hs/id :Nse_Prc_tick))
+                       first
+                       :content
+                       first
+                       :content
+                       first)
         url (let [content (->> parsed
                                (hs/select (hs/tag :meta))
                                (filter #(contains (:content (:attrs %)) "url="))
@@ -65,14 +68,16 @@
                      :href)]
     #_(log "&&&&& " smbl url "\n" buy sell hold "\n" reviews)
     {:smbl smbl :url url :reviews reviews
-     :buy buy :sell sell :hold hold}))
+     :buy buy :sell sell :hold hold :nse-price nse-price}))
 
 (defn is-helper [response]
-  (let [rslt (remove #(= % "javascript:;")
-                     (map (comp :href :attrs)
-                          (filter #(= :a (:tag %))
-                                  (hs/select (hs/class :bl_12)
-                                             (hc/as-hickory (hc/parse response))))))]
+  (let [rslt (->> response
+                  hc/parse
+                  hc/as-hickory
+                  (hs/select (hs/class :bl_12))
+                  (filter #(= :a (:tag %)))
+                  (map (comp :href :attrs))
+                  (remove #(= % "javascript:;")))]
     (if dev? (take 10 rslt) rslt)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -101,9 +106,9 @@
     (let [state (atom nil)
           smbls (if dev? ["A" "S"] index-suffixes)
           ch-urls (index->smbls smbls)
-          ;; ch needs to be of size 1 because both >! and <! happen in same thread,
+          ;; ch needs to be of size (>=) 1 because both >! and <! happen in same thread,
           ;; and both producer and consumer will never be available simultaneously
-          ;; (on the same thread) if size = 0
+          ;; (on the same thread) if size = 0 (default)
           ch (chan 1)]
       (go (>! ch (do (dotimes [_ (count smbls)]
                        (let [urls (is-helper (<! ch-urls))]
@@ -117,6 +122,8 @@
           (let [_ (<! ch) ; wait till all details for all smbls have been collected
                 rslt (reverse (sort-by :buy @state))]
             (reset! app-state (->> rslt
+                                   (remove #(or (nil? (:nse-price %))
+                                                (< (js/parseFloat (:nse-price %)) 100)))
                                    (filter #(>= (or (:buy %) 0) 80))
                                    (take 10))))))))
 
@@ -124,14 +131,16 @@
   [:div
    [:table {:class "table table-striped table-bordered"}
     [:tbody
-     [:tr [:th "name"] [:th "buy"]]
+     [:tr [:th "name"] [:th "buy%"] [:th "nse-price"]]
      (for [row @app-state]
        ^{:key (.random js/Math)}
-       [:tr [:td [:a {:href (:url row)} (:smbl row)]] [:td (:buy row)]])]]
+       [:tr [:td [:a {:href (:url row)} (:smbl row)]]
+        [:td (:buy row)]
+        [:td (:nse-price row)]])]]
    [:input {:id "refresh" :type "button" :value "Refresh"}]])
 
 (defn add-event-listeners []
-  (.addEventListener (by-id "refresh") "click" #(do (reset)(main))))
+  (.addEventListener (by-id "refresh") "click" #(do (reset) (main))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; init
