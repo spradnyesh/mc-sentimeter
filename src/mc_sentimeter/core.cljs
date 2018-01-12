@@ -33,42 +33,42 @@
   (log "something bad happened: " status " " status-text))
 
 (defn sd-helper [response]
-  (let [parsed (hc/as-hickory (hc/parse response))
-        smbl (->> parsed
-                  (hs/select (hs/class :b_42))
-                  first
-                  :content
-                  first
-                  :content
-                  first)
-        nse-price (->> parsed
-                       (hs/select (hs/id :Nse_Prc_tick))
-                       first
-                       :content
-                       first
-                       :content
-                       first)
-        url (let [content (->> parsed
-                               (hs/select (hs/tag :meta))
-                               (filter #(contains (:content (:attrs %)) "url="))
-                               first
-                               :attrs
-                               :content)]
-              (subs content (.indexOf content "http://")))
-        [buy sell hold] (map (comp int #(subs % 0 (- (count %) 2)))
-                             (->> parsed
-                                  (hs/select (hs/class :pl_bar))
-                                  (take 3)
-                                  (map (comp #(subs % 6) :style :attrs))))
-        reviews (->> parsed
-                     (hs/select (hs/class :bl_11))
-                     (filter #(contains (:href (:attrs %)) "/comments/"))
-                     first
-                     :attrs
-                     :href)]
-    #_(log "&&&&& " smbl url "\n" buy sell hold "\n" reviews)
-    {:smbl smbl :url url :reviews reviews
-     :buy buy :sell sell :hold hold :nse-price nse-price}))
+  (let [parsed (hc/as-hickory (hc/parse response))]
+    (when-let [content (some->> parsed
+                                (hs/select (hs/tag :meta))
+                                ((fn [x] (when-not (empty? x) x)))
+                                (filter #(contains (:content (:attrs %)) "url="))
+                                first
+                                :attrs
+                                :content)]
+      (let [url (subs content (.indexOf content "http://"))
+            smbl (->> parsed
+                      (hs/select (hs/class :company_name))
+                      first
+                      :content
+                      first)
+            nse-price (->> parsed
+                           (hs/select (hs/id :Nse_Prc_tick))
+                           first
+                           :content
+                           first
+                           :content
+                           first)
+
+            [buy sell hold] (map (comp int #(subs % 0 (- (count %) 2)))
+                                 (->> parsed
+                                      (hs/select (hs/class :pl_bar))
+                                      (take 3)
+                                      (map (comp #(subs % 6) :style :attrs))))
+            reviews (->> parsed
+                         (hs/select (hs/class :bl_11))
+                         (filter #(contains (:href (:attrs %)) "/comments/"))
+                         first
+                         :attrs
+                         :href)]
+        (when dev? (log "&&&&& " smbl "\n" url "\n" buy sell hold "\n" reviews))
+        {:smbl smbl :url url :reviews reviews
+         :buy buy :sell sell :hold hold :nse-price nse-price}))))
 
 (defn is-helper [response]
   (let [rslt (->> response
